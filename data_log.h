@@ -32,12 +32,6 @@ typedef struct DataLog {
     size_t channel_capacity;
 } DataLog;
 
-int is_numeric(const char* str);
-void trim_whitespace(char* str);
-char** split_csv_line(char* line, int* count);
-Channel* channel_create(const char* name, const char* units, int decimals, size_t initial_size);
-
-
 int datalog_from_can_log(DataLog* log, FILE* f, const char* dbc_path);
 int datalog_from_csv_log(DataLog* log, FILE* f);
 int datalog_from_accessport_log(DataLog* log, FILE* f);
