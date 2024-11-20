@@ -107,58 +107,58 @@ void datalog_destroy(DataLog* log) {
 // }
 
 //     // ***************
-//     void data_log_print_channels(DataLog* log) {
-//         for (size_t i = 0; i < log->channel_count; i++) {
-//             Channel* channel = log->channels[i];
-//             printf("  %s (%s)\n", channel->name, channel->units);
-//         }
+void data_log_print_channels(DataLog* log) {
+    for (size_t i = 0; i < log->channel_count; i++) {
+        Channel* channel = log->channels[i];
+        printf("  %s (%s)\n", channel->name, channel->units);
+    }
 //     }
 
-//     double channel_avg_frequency(Channel* channel) {
-//         if (channel->message_count < 2) return 0.0;
-        
-//         double duration = channel->messages[channel->message_count-1].timestamp - 
-//                         channel->messages[0].timestamp;
-//         return (channel->message_count - 1) / duration;
-//     }
+double channel_avg_frequency(Channel* channel) {
+    if (channel->message_count < 2) return 0.0;
+    
+    double duration = channel->messages[channel->message_count-1].timestamp - 
+                    channel->messages[0].timestamp;
+    return (channel->message_count - 1) / duration;
+}
 
-//     void channel_destroy(Channel* channel) {
-//         if (channel) {
-//             free(channel->name);
-//             free(channel->units);
-//             free(channel->messages);
-//             free(channel);
-//         }
-//     }
+void channel_destroy(Channel* channel) {
+    if (channel) {
+        free(channel->name);
+        free(channel->units);
+        free(channel->messages);
+        free(channel);
+    }
+}
 
-//     int datalog_channel_count(DataLog* log) {
-//         return log->channel_count;
-//     }
+int datalog_channel_count(DataLog* log) {
+    return log->channel_count;
+}
 
-//     double datalog_duration(DataLog* log) {
-//         if (log->channel_count == 0) return 0.0;
-//         return datalog_end(log) - datalog_start(log);
-//     }
+double datalog_duration(DataLog* log) {
+    if (log->channel_count == 0) return 0.0;
+    return datalog_end(log) - datalog_start(log);
+}
 
-//     void datalog_free(DataLog* log) {
-//         if (log) {
-//             datalog_destroy(log);
-//         }
-//     }
+void datalog_free(DataLog* log) {
+    if (log) {
+        datalog_destroy(log);
+    }
+}
 
-//     int datalog_from_can_log(DataLog* log, FILE* f, const char* dbc_path) {
-//         // Can stuff, for now returns error
-//         // For now returning error
-//         return -1;
-//     }
+int datalog_from_can_log(DataLog* log, FILE* f, const char* dbc_path) {
+    // Can stuff, for now returns error
+    // For now returning error
+    return -1;
+}
 
 
-//     int datalog_from_accessport_log(DataLog* log, FILE* f) {
-//         // Implementation depends on Accessport format
-//         // For now returning error
-//         return -1;
-//     }
-// // ********
+int datalog_from_accessport_log(DataLog* log, FILE* f) {
+    // Implementation depends on Accessport format
+    // For now returning error
+    return -1;
+}
+// ********
 
 
 int datalog_from_csv_log(DataLog* log, FILE* f) {
@@ -219,7 +219,7 @@ int datalog_from_csv_log(DataLog* log, FILE* f) {
 
         // Parse values for each channel
         for (size_t i = 0; i < log->channel_count; i++) {
-            Channel* channel = log->channels[i];
+            Channel* channel = log->channels[i];   
             char* value_str = values[i + 1];
 
             if (is_numeric(value_str)) {
