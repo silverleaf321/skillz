@@ -378,17 +378,17 @@ char** split_csv_line(char* line, int* count) {
     return tokens;
 }
 
-Channel* channel_create(const char* name, const char* units, int decimals, size_t initial_size) {
-    Channel* channel = (Channel*)malloc(sizeof(Channel));
-    if (!channel) return NULL;
+// Channel* channel_create(const char* name, const char* units, int decimals, size_t initial_size) {
+//     Channel* channel = (Channel*)malloc(sizeof(Channel));
+//     if (!channel) return NULL;
     
-    channel->name = strdup(name);
-    channel->units = strdup(units);
-    channel->decimals = decimals;
-    channel->message_count = 0;
-    channel->message_capacity = initial_size;
-    channel->messages = (Message*)malloc(sizeof(Message) * initial_size);
-    channel->data_type = NULL; // Not used in C version
+//     channel->name = strdup(name);
+//     channel->units = strdup(units);
+//     channel->decimals = decimals;
+//     channel->message_count = 0;
+//     channel->message_capacity = initial_size;
+//     channel->messages = (Message*)malloc(sizeof(Message) * initial_size);
+//     channel->data_type = NULL; // Not used in C version
     
-    return channel;
-}
+//     return channel;
+// }
