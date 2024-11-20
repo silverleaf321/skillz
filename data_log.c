@@ -33,6 +33,7 @@ void datalog_destroy(DataLog* log) {
     }
 }
 
+// // 345234trewgfdsjvkaler435oitwegrjksdfl;raewkq3portwegk
 // int datalog_from_csv_log(DataLog* log, FILE* f) {
 //     if (!f) return -1;
     
@@ -106,13 +107,15 @@ void datalog_destroy(DataLog* log) {
 //     return 0;
 // }
 
+// // 345234trewgfdsjvkaler435oitwegrjksdfl;raewkq3portwegk
+
 //     // ***************
 void data_log_print_channels(DataLog* log) {
     for (size_t i = 0; i < log->channel_count; i++) {
         Channel* channel = log->channels[i];
         printf("  %s (%s)\n", channel->name, channel->units);
     }
-//     }
+}
 
 double channel_avg_frequency(Channel* channel) {
     if (channel->message_count < 2) return 0.0;
@@ -160,7 +163,7 @@ int datalog_from_accessport_log(DataLog* log, FILE* f) {
 }
 // ********
 
-
+// new one
 int datalog_from_csv_log(DataLog* log, FILE* f) {
     if (!f) return -1;
     
