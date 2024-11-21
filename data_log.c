@@ -5,6 +5,15 @@
 #define MAX_COLUMNS 500
 #define INITIAL_CHANNEL_CAPACITY 500
 
+void trim_whitespace(char* str) {
+    char* end;
+    while(isspace((unsigned char)*str)) str++;
+    if(*str == 0) return;
+    end = str + strlen(str) - 1;
+    while(end > str && isspace((unsigned char)*end)) end--;
+    end[1] = '\0';
+}
+
 DataLog* datalog_create(const char* name) {
     DataLog* log = (DataLog*)malloc(sizeof(DataLog));
     if (!log) return NULL;
@@ -39,8 +48,6 @@ int datalog_from_csv_log(DataLog* log, FILE* f) {
     char line[MAX_LINE_LENGTH];
     char* header = NULL;
     char* units = NULL;
-    int header_count = 0;
-    int unit_count = 0;
     
     // Read header
     if (fgets(line, MAX_LINE_LENGTH, f)) {
@@ -52,26 +59,38 @@ int datalog_from_csv_log(DataLog* log, FILE* f) {
         units = strdup(line);
     }
 
-    // Parse header and create channels
-    char* token = strtok(header, ",");
-    token = strtok(NULL, ","); // Skip time column
+    // Parse header and units to create channels
+    char** headers = malloc(MAX_COLUMNS * sizeof(char*));
+    char** unit_tokens = malloc(MAX_COLUMNS * sizeof(char*));
+    int column_count = 0;
     
-    char* unit_token = strtok(units, ",");
-    unit_token = strtok(NULL, ","); // Skip time unit
-
-    while (token && unit_token) {
-        // Remove newline and whitespace
-        char* clean_name = strtok(token, "\n\r ");
-        char* clean_unit = strtok(unit_token, "\n\r ");
-        
-        datalog_add_channel(log, clean_name, clean_unit, 3);
-        
+    // Split header line
+    char* token = strtok(header, ",");
+    while (token && column_count < MAX_COLUMNS) {
+        headers[column_count] = strdup(token);
+        trim_whitespace(headers[column_count]);
+        column_count++;
         token = strtok(NULL, ",");
-        unit_token = strtok(NULL, ",");
+    }
+    
+    // Split units line
+    int unit_count = 0;
+    token = strtok(units, ",");
+    while (token && unit_count < column_count) {
+        unit_tokens[unit_count] = strdup(token);
+        trim_whitespace(unit_tokens[unit_count]);
+        unit_count++;
+        token = strtok(NULL, ",");
+    }
+    
+    // Create channels (skip first column which is time)
+    for (int i = 1; i < column_count; i++) {
+        if (headers[i] && unit_tokens[i]) {
+            datalog_add_channel(log, headers[i], unit_tokens[i], 3);
+        }
     }
 
-
-    // Parse data
+    // Parse data rows
     while (fgets(line, MAX_LINE_LENGTH, f)) {
         char* value_str = strtok(line, ",");
         double timestamp = atof(value_str);
@@ -80,7 +99,6 @@ int datalog_from_csv_log(DataLog* log, FILE* f) {
             value_str = strtok(NULL, ",");
             if (value_str) {
                 double value = atof(value_str);
-                // Add message to channel
                 Channel* channel = log->channels[i];
                 if (channel->message_count >= channel->message_capacity) {
                     channel->message_capacity *= 2;
@@ -94,8 +112,16 @@ int datalog_from_csv_log(DataLog* log, FILE* f) {
         }
     }
 
+    // Cleanup
+    for (int i = 0; i < column_count; i++) {
+        free(headers[i]);
+        if (i < unit_count) free(unit_tokens[i]);
+    }
+    free(headers);
+    free(unit_tokens);
     free(header);
     free(units);
+    
     return 0;
 }
 

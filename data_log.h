@@ -32,6 +32,9 @@ typedef struct DataLog {
     size_t channel_capacity;
 } DataLog;
 
+
+void trim_whitespace(char* str);
+
 int datalog_from_can_log(DataLog* log, FILE* f, const char* dbc_path);
 int datalog_from_csv_log(DataLog* log, FILE* f);
 int datalog_from_accessport_log(DataLog* log, FILE* f);
@@ -54,5 +57,6 @@ void channel_destroy(Channel* channel);
 double channel_start(Channel* channel);
 double channel_end(Channel* channel);
 double channel_avg_frequency(Channel* channel);
+
 
 #endif
