@@ -21,7 +21,7 @@ typedef struct Channel {
     Message* messages;
     size_t message_count;
     size_t message_capacity;
-    double (*data_type)(double); // Function pointer for type conversion
+    double (*data_type)(double); 
 } Channel;
 
 // DataLog structure
@@ -38,8 +38,6 @@ int datalog_from_accessport_log(DataLog* log, FILE* f);
 int datalog_channel_count(DataLog* log);
 void datalog_free(DataLog* log);
 void data_log_print_channels(DataLog* log);
-
-// DataLog functions
 DataLog* datalog_create(const char* name);
 void datalog_destroy(DataLog* log);
 void datalog_clear(DataLog* log);

@@ -7,7 +7,7 @@
 #include <time.h>
 
 #define MAX_STRING_LENGTH 1024
-#define MAX_CHANNELS 100
+#define MAX_CHANNELS 500
 
 // Data types for channel data
 typedef enum {

@@ -1,7 +1,7 @@
 #include "motec_log.h"
 #include <string.h>
 
-#define INITIAL_CHANNEL_CAPACITY 100
+#define INITIAL_CHANNEL_CAPACITY 500
 
 MotecLog* motec_log_create(void) {
     MotecLog* log = (MotecLog*)malloc(sizeof(MotecLog));
