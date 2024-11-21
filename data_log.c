@@ -2,7 +2,7 @@
 #include <ctype.h>
 
 #define MAX_LINE_LENGTH 1024
-#define MAX_COLUMNS 100
+#define MAX_COLUMNS 500
 #define INITIAL_CHANNEL_CAPACITY 10
 
 DataLog* datalog_create(const char* name) {
