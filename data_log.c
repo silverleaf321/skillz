@@ -5,6 +5,13 @@
 #define MAX_COLUMNS 500
 #define INITIAL_CHANNEL_CAPACITY 500
 
+// Helper function to check if string is numeric
+int is_numeric(const char* str) {
+    char* endptr;
+    strtod(str, &endptr);
+    return *endptr == '\0' || isspace((unsigned char)*endptr);
+}
+
 DataLog* datalog_create(const char* name) {
     DataLog* log = (DataLog*)malloc(sizeof(DataLog));
     if (!log) return NULL;
@@ -164,13 +171,6 @@ double channel_avg_frequency(Channel* channel) {
     return (channel->message_count - 1) / duration;
 }
 
-double channel_avg_frequency(Channel* channel) {
-    if (channel->message_count < 2) return 0.0;
-    
-    double duration = channel->messages[channel->message_count-1].timestamp - 
-                    channel->messages[0].timestamp;
-    return (channel->message_count - 1) / duration;
-}
 
 void channel_destroy(Channel* channel) {
     if (channel) {
@@ -288,13 +288,6 @@ void trim_whitespace(char* str) {
     end[1] = '\0';
 }
 
-
-// Helper function to check if string is numeric
-int is_numeric(const char* str) {
-    char* endptr;
-    strtod(str, &endptr);
-    return *endptr == '\0' || isspace((unsigned char)*endptr);
-}
 
 // Helper function to split CSV line
 char** split_csv_line(char* line, int* count) {
