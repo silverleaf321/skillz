@@ -7,6 +7,8 @@
 
 // Helper function to check if string is numeric
 int is_numeric(const char* str) {
+    if (!str || !*str) return 0;  // Check for NULL or empty string
+    // printf("Debug - Checking if numeric: '%s'\n", str); // Debug
     char* endptr;
     strtod(str, &endptr);
     return *endptr == '\0' || isspace((unsigned char)*endptr);
@@ -40,6 +42,7 @@ void datalog_destroy(DataLog* log) {
     }
 }
 
+
 int datalog_from_csv_log(DataLog* log, FILE* f) {
     if (!f) return -1;
     
@@ -47,17 +50,17 @@ int datalog_from_csv_log(DataLog* log, FILE* f) {
     char* header = NULL;
     char* units = NULL;
     
-    // Read header
+    // Read header and units lines
     if (fgets(line, MAX_LINE_LENGTH, f)) {
         header = strdup(line);
+        printf("Debug - Header line: %s\n", header);
     }
-    
-    // Read units
     if (fgets(line, MAX_LINE_LENGTH, f)) {
         units = strdup(line);
+        printf("Debug - Units line: %s\n", units);
     }
 
-    // Parse header and units to create channels
+    // Parse header and units
     char** headers = malloc(MAX_COLUMNS * sizeof(char*));
     char** unit_tokens = malloc(MAX_COLUMNS * sizeof(char*));
     int column_count = 0;
@@ -77,12 +80,14 @@ int datalog_from_csv_log(DataLog* log, FILE* f) {
     while (token && unit_count < column_count) {
         unit_tokens[unit_count] = strdup(token);
         trim_whitespace(unit_tokens[unit_count]);
+        printf("Debug - Column %d (%s): unit='%s'\n", 
+               unit_count, headers[unit_count], unit_tokens[unit_count]);
         unit_count++;
         token = strtok(NULL, ",");
     }
-    
+
     // Create channels (skip first column which is time)
-    for (int i = 1; i < column_count; i++) {
+    for (int i = 1; i < column_count && i < unit_count; i++) {
         if (headers[i] && unit_tokens[i]) {
             Channel* channel = channel_create(headers[i], unit_tokens[i], 3, 1000);
             if (channel) {
@@ -94,27 +99,28 @@ int datalog_from_csv_log(DataLog* log, FILE* f) {
     // Parse data rows
     double first_timestamp = -1;
     double last_timestamp = 0;
-    int message_count = 0;
     
     while (fgets(line, MAX_LINE_LENGTH, f)) {
         char* value_str = strtok(line, ",");
-        if (!value_str) continue;
+        if (!value_str || !is_numeric(value_str)) continue;
         
         double timestamp = atof(value_str);
         if (first_timestamp < 0) first_timestamp = timestamp;
         last_timestamp = timestamp;
-        message_count++;
         
+        // Process each channel's value
         for (size_t i = 0; i < log->channel_count; i++) {
             value_str = strtok(NULL, ",");
             if (value_str && is_numeric(value_str)) {
                 double value = atof(value_str);
                 Channel* channel = log->channels[i];
+                
                 if (channel->message_count >= channel->message_capacity) {
                     channel->message_capacity *= 2;
                     channel->messages = realloc(channel->messages, 
                         channel->message_capacity * sizeof(Message));
                 }
+                
                 channel->messages[channel->message_count].timestamp = timestamp;
                 channel->messages[channel->message_count].value = value;
                 channel->message_count++;
@@ -122,15 +128,17 @@ int datalog_from_csv_log(DataLog* log, FILE* f) {
         }
     }
 
-    // Calculate frequency and update channel metadata
+    // Calculate frequency for each channel
     double duration = last_timestamp - first_timestamp;
-    double frequency = (message_count - 1) / duration;
-    
-    for (size_t i = 0; i < log->channel_count; i++) {
-        Channel* channel = log->channels[i];
-        channel->decimals = 3;  // Default precision
-        // Set actual frequency based on messages
-        channel->frequency = frequency;
+    if (duration > 0) {
+        for (size_t i = 0; i < log->channel_count; i++) {
+            Channel* channel = log->channels[i];
+            if (channel->message_count > 1) {
+                channel->frequency = (channel->message_count - 1) / duration;
+                printf("Debug - Channel %s: %zu messages over %.3fs = %.2f Hz\n",
+                       channel->name, channel->message_count, duration, channel->frequency);
+            }
+        }
     }
 
     // Cleanup
@@ -145,6 +153,9 @@ int datalog_from_csv_log(DataLog* log, FILE* f) {
     
     return 0;
 }
+
+// end function
+
 
 void data_log_print_channels(DataLog* log) {
     printf("Parsed %.1fs log with %d channels:\n", datalog_duration(log), log->channel_count);

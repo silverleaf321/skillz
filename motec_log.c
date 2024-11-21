@@ -119,6 +119,10 @@ int motec_log_initialize(MotecLog* log) {
 
 int motec_log_add_channel(MotecLog* log, Channel* channel) {
     if (!log || !channel) return -1;
+
+    // Debug
+    printf("Debug - Adding channel '%s' with unit '%s'\n", 
+        channel->name, channel->units);
     
     // Check capacity
     if (log->channel_count >= log->channel_capacity) {
