@@ -22,6 +22,7 @@ typedef struct Channel {
     size_t message_count;
     size_t message_capacity;
     double (*data_type)(double); 
+    double frequency;
 } Channel;
 
 // DataLog structure

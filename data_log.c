@@ -77,18 +77,30 @@ int datalog_from_csv_log(DataLog* log, FILE* f) {
     // Create channels (skip first column which is time)
     for (int i = 1; i < column_count; i++) {
         if (headers[i] && unit_tokens[i]) {
-            datalog_add_channel(log, headers[i], unit_tokens[i], 3);
+            Channel* channel = channel_create(headers[i], unit_tokens[i], 3, 1000);
+            if (channel) {
+                log->channels[log->channel_count++] = channel;
+            }
         }
     }
 
     // Parse data rows
+    double first_timestamp = -1;
+    double last_timestamp = 0;
+    int message_count = 0;
+    
     while (fgets(line, MAX_LINE_LENGTH, f)) {
         char* value_str = strtok(line, ",");
+        if (!value_str) continue;
+        
         double timestamp = atof(value_str);
+        if (first_timestamp < 0) first_timestamp = timestamp;
+        last_timestamp = timestamp;
+        message_count++;
         
         for (size_t i = 0; i < log->channel_count; i++) {
             value_str = strtok(NULL, ",");
-            if (value_str) {
+            if (value_str && is_numeric(value_str)) {
                 double value = atof(value_str);
                 Channel* channel = log->channels[i];
                 if (channel->message_count >= channel->message_capacity) {
@@ -101,6 +113,17 @@ int datalog_from_csv_log(DataLog* log, FILE* f) {
                 channel->message_count++;
             }
         }
+    }
+
+    // Calculate frequency and update channel metadata
+    double duration = last_timestamp - first_timestamp;
+    double frequency = (message_count - 1) / duration;
+    
+    for (size_t i = 0; i < log->channel_count; i++) {
+        Channel* channel = log->channels[i];
+        channel->decimals = 3;  // Default precision
+        // Set actual frequency based on messages
+        channel->frequency = frequency;
     }
 
     // Cleanup
@@ -116,58 +139,75 @@ int datalog_from_csv_log(DataLog* log, FILE* f) {
     return 0;
 }
 
-    // ***************
-    void data_log_print_channels(DataLog* log) {
-        for (size_t i = 0; i < log->channel_count; i++) {
-            Channel* channel = log->channels[i];
-            printf("  %s (%s)\n", channel->name, channel->units);
-        }
+void data_log_print_channels(DataLog* log) {
+    printf("Parsed %.1fs log with %d channels:\n", datalog_duration(log), log->channel_count);
+    
+    for (size_t i = 0; i < log->channel_count; i++) {
+        Channel* channel = log->channels[i];
+        double freq = channel_avg_frequency(channel);
+        printf("        Channel: %s, Units: %s, Decimals: %d, Messages: %zu, Frequency: %.2f Hz\n",
+               channel->name,
+               channel->units,
+               channel->decimals,
+               channel->message_count,
+               freq);
     }
+}
 
-    double channel_avg_frequency(Channel* channel) {
-        if (channel->message_count < 2) return 0.0;
-        
-        double duration = channel->messages[channel->message_count-1].timestamp - 
-                        channel->messages[0].timestamp;
-        return (channel->message_count - 1) / duration;
+double channel_avg_frequency(Channel* channel) {
+    if (channel->message_count < 2) return 0.0;
+    
+    double duration = channel->messages[channel->message_count-1].timestamp - 
+                     channel->messages[0].timestamp;
+    if (duration <= 0.0) return 0.0;
+    
+    return (channel->message_count - 1) / duration;
+}
+
+double channel_avg_frequency(Channel* channel) {
+    if (channel->message_count < 2) return 0.0;
+    
+    double duration = channel->messages[channel->message_count-1].timestamp - 
+                    channel->messages[0].timestamp;
+    return (channel->message_count - 1) / duration;
+}
+
+void channel_destroy(Channel* channel) {
+    if (channel) {
+        free(channel->name);
+        free(channel->units);
+        free(channel->messages);
+        free(channel);
     }
+}
 
-    void channel_destroy(Channel* channel) {
-        if (channel) {
-            free(channel->name);
-            free(channel->units);
-            free(channel->messages);
-            free(channel);
-        }
+int datalog_channel_count(DataLog* log) {
+    return log->channel_count;
+}
+
+double datalog_duration(DataLog* log) {
+    if (log->channel_count == 0) return 0.0;
+    return datalog_end(log) - datalog_start(log);
+}
+
+void datalog_free(DataLog* log) {
+    if (log) {
+        datalog_destroy(log);
     }
+}
 
-    int datalog_channel_count(DataLog* log) {
-        return log->channel_count;
-    }
-
-    double datalog_duration(DataLog* log) {
-        if (log->channel_count == 0) return 0.0;
-        return datalog_end(log) - datalog_start(log);
-    }
-
-    void datalog_free(DataLog* log) {
-        if (log) {
-            datalog_destroy(log);
-        }
-    }
-
-    int datalog_from_can_log(DataLog* log, FILE* f, const char* dbc_path) {
-        // Can stuff, for now returns error
-        // For now returning error
-        return -1;
-    }
+int datalog_from_can_log(DataLog* log, FILE* f, const char* dbc_path) {
+    // Can stuff, for now returns error
+    // For now returning error
+    return -1;
+}
 
 
-    int datalog_from_accessport_log(DataLog* log, FILE* f) {
-        // Implementation depends on Accessport format
-        // For now returning error
-        return -1;
-    }
+int datalog_from_accessport_log(DataLog* log, FILE* f) {
+    // Implementation depends on Accessport format
+    // For now returning error
+    return -1;
+}
 // ********
 
 ////////////
@@ -206,7 +246,6 @@ double datalog_end(DataLog* log) {
 
 //////////
 
-
 // 888888888
 
 Channel* channel_create(const char* name, const char* units, int decimals, size_t initial_size) {
@@ -220,6 +259,7 @@ Channel* channel_create(const char* name, const char* units, int decimals, size_
     channel->message_capacity = initial_size;
     channel->messages = (Message*)malloc(sizeof(Message) * initial_size);
     channel->data_type = NULL;
+    channel->frequency = 0.0;
     
     return channel;
 }
@@ -238,16 +278,6 @@ double channel_end(Channel* channel) {
 
 
 // csv parsing:
-
-// // Helper function to trim whitespace
-// void trim_whitespace(char* str) {
-//     char* end;
-//     while(isspace((unsigned char)*str)) str++;
-//     if(*str == 0) return;
-//     end = str + strlen(str) - 1;
-//     while(end > str && isspace((unsigned char)*end)) end--;
-//     end[1] = '\0';
-// }
 
 void trim_whitespace(char* str) {
     char* end;
