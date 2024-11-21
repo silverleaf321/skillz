@@ -39,6 +39,8 @@ int datalog_from_csv_log(DataLog* log, FILE* f) {
     char line[MAX_LINE_LENGTH];
     char* header = NULL;
     char* units = NULL;
+    int header_count = 0;
+    int unit_count = 0;
     
     // Read header
     if (fgets(line, MAX_LINE_LENGTH, f)) {

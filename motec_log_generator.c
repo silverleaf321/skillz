@@ -153,6 +153,7 @@ int process_log_file(const GeneratorArgs* args) {
 
     if (result != 0 || datalog_channel_count(data_log) == 0) {
         printf("ERROR: Failed to find any channels in log data\n");
+        // printf("Found %d channels in data_log\n", datalog_channel_count(data_log)); // Debug
         datalog_free(data_log);
         return -1;
     }

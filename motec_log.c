@@ -188,7 +188,7 @@ int motec_log_add_channel(MotecLog* log, Channel* channel) {
 int motec_log_add_all_channels(MotecLog* log, DataLog* data_log) {
     if (!log || !data_log) return -1;
     
-    for (int i = 0; i < data_log->channel_count; i++) {
+    for (int i = 0; i < data_log->channel_count; i++) { // Maybe error handling issue?
         if (motec_log_add_channel(log, data_log->channels[i]) != 0) {
             return -1;
         }
