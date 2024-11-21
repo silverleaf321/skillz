@@ -5,15 +5,6 @@
 #define MAX_COLUMNS 500
 #define INITIAL_CHANNEL_CAPACITY 500
 
-void trim_whitespace(char* str) {
-    char* end;
-    while(isspace((unsigned char)*str)) str++;
-    if(*str == 0) return;
-    end = str + strlen(str) - 1;
-    while(end > str && isspace((unsigned char)*end)) end--;
-    end[1] = '\0';
-}
-
 DataLog* datalog_create(const char* name) {
     DataLog* log = (DataLog*)malloc(sizeof(DataLog));
     if (!log) return NULL;
@@ -248,7 +239,16 @@ double channel_end(Channel* channel) {
 
 // csv parsing:
 
-// Helper function to trim whitespace
+// // Helper function to trim whitespace
+// void trim_whitespace(char* str) {
+//     char* end;
+//     while(isspace((unsigned char)*str)) str++;
+//     if(*str == 0) return;
+//     end = str + strlen(str) - 1;
+//     while(end > str && isspace((unsigned char)*end)) end--;
+//     end[1] = '\0';
+// }
+
 void trim_whitespace(char* str) {
     char* end;
     while(isspace((unsigned char)*str)) str++;
@@ -257,6 +257,7 @@ void trim_whitespace(char* str) {
     while(end > str && isspace((unsigned char)*end)) end--;
     end[1] = '\0';
 }
+
 
 // Helper function to check if string is numeric
 int is_numeric(const char* str) {
