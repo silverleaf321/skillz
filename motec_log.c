@@ -1,7 +1,7 @@
 #include "motec_log.h"
 #include <string.h>
 
-#define INITIAL_CHANNEL_CAPACITY 500
+#define INITIAL_CHANNEL_CAPACITY 1000
 
 MotecLog* motec_log_create(void) {
     MotecLog* log = (MotecLog*)malloc(sizeof(MotecLog));
@@ -121,8 +121,8 @@ int motec_log_add_channel(MotecLog* log, Channel* channel) {
     if (!log || !channel) return -1;
 
     // Debug
-    printf("Debug - Adding channel '%s' with unit '%s'\n", 
-        channel->name, channel->units);
+    // printf("Debug - Adding channel '%s' with unit '%s'\n", 
+    //     channel->name, channel->units);
     
     // Check capacity
     if (log->channel_count >= log->channel_capacity) {

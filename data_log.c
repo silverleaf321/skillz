@@ -2,7 +2,7 @@
 #include <ctype.h>
 
 #define MAX_LINE_LENGTH 1024
-#define MAX_COLUMNS 500
+#define MAX_COLUMNS 1000
 #define INITIAL_CHANNEL_CAPACITY 500
 
 // Helper function to check if string is numeric
@@ -53,11 +53,11 @@ int datalog_from_csv_log(DataLog* log, FILE* f) {
     // Read header and units lines
     if (fgets(line, MAX_LINE_LENGTH, f)) {
         header = strdup(line);
-        printf("Debug - Header line: %s\n", header);
+        // printf("Debug - Header line: %s\n", header);
     }
     if (fgets(line, MAX_LINE_LENGTH, f)) {
         units = strdup(line);
-        printf("Debug - Units line: %s\n", units);
+        // printf("Debug - Units line: %s\n", units);
     }
 
     // Parse header and units
@@ -80,8 +80,8 @@ int datalog_from_csv_log(DataLog* log, FILE* f) {
     while (token && unit_count < column_count) {
         unit_tokens[unit_count] = strdup(token);
         trim_whitespace(unit_tokens[unit_count]);
-        printf("Debug - Column %d (%s): unit='%s'\n", 
-               unit_count, headers[unit_count], unit_tokens[unit_count]);
+        // printf("Debug - Column %d (%s): unit='%s'\n", 
+        //        unit_count, headers[unit_count], unit_tokens[unit_count]);
         unit_count++;
         token = strtok(NULL, ",");
     }
@@ -135,8 +135,8 @@ int datalog_from_csv_log(DataLog* log, FILE* f) {
             Channel* channel = log->channels[i];
             if (channel->message_count > 1) {
                 channel->frequency = (channel->message_count - 1) / duration;
-                printf("Debug - Channel %s: %zu messages over %.3fs = %.2f Hz\n",
-                       channel->name, channel->message_count, duration, channel->frequency);
+                // printf("Debug - Channel %s: %zu messages over %.3fs = %.2f Hz\n", // Debug
+                //        channel->name, channel->message_count, duration, channel->frequency);
             }
         }
     }
