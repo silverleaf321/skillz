@@ -1,5 +1,4 @@
 #include "data_log.h"
-// #include "ldparser.h"
 #include <ctype.h>
 
 #define MAX_LINE_LENGTH 1024
