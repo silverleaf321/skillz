@@ -5,6 +5,31 @@
 #define MAX_COLUMNS 1000
 #define INITIAL_CHANNEL_CAPACITY 500
 
+#define MAX(a,b) ((a) > (b) ? (a) : (b))
+
+void channel_add_message(Channel* channel, Message* msg) {
+    if (channel->message_count >= channel->message_capacity) {
+        size_t new_capacity = channel->message_capacity * 2;
+        Message* new_messages = realloc(channel->messages, new_capacity * sizeof(Message));
+        if (!new_messages) return;
+        channel->messages = new_messages;
+        channel->message_capacity = new_capacity;
+    }
+    channel->messages[channel->message_count++] = *msg;
+}
+
+void datalog_add_channel(DataLog* log, Channel* channel) {
+    if (log->channel_count >= log->channel_capacity) {
+        size_t new_capacity = log->channel_capacity * 2;
+        Channel** new_channels = realloc(log->channels, new_capacity * sizeof(Channel*));
+        if (!new_channels) return;
+        log->channels = new_channels;
+        log->channel_capacity = new_capacity;
+    }
+    log->channels[log->channel_count++] = channel;
+}
+
+
 // Helper function to check if string is numeric
 int is_numeric(const char* str) {
     if (!str || !*str) return 0;  // Check for NULL or empty string
@@ -47,133 +72,97 @@ int datalog_from_csv_log(DataLog* log, FILE* f) {
     if (!f) return -1;
     
     char line[MAX_LINE_LENGTH];
-    char* header = NULL;
-    char* units = NULL;
     
-    // Read header and units lines
-    if (fgets(line, MAX_LINE_LENGTH, f)) {
-        header = strdup(line);
-    }
-    if (fgets(line, MAX_LINE_LENGTH, f)) {
-        units = strdup(line);
-    }
-
-    if (!header || !units) {
+    // Read header line (channel names)
+    if (!fgets(line, sizeof(line), f)) return -1;
+    char* header = strdup(line);
+    
+    // Read units line
+    if (!fgets(line, sizeof(line), f)) {
         free(header);
-        free(units);
         return -1;
     }
-
-    // Parse header and units
-    char** headers = malloc(MAX_COLUMNS * sizeof(char*));
-    char** unit_tokens = malloc(MAX_COLUMNS * sizeof(char*));
-    int column_count = 0;
+    char* units = strdup(line);
     
-    // Split header line
-    char* token = strtok(header, ",");
-    while (token && column_count < MAX_COLUMNS) {
-        headers[column_count] = strdup(token);
-        trim_whitespace(headers[column_count]);
-        column_count++;
+    // Parse header to get channel names
+    char* header_copy = strdup(header);
+    char* units_copy = strdup(units);
+    char* token = strtok(header_copy, ",");
+    char* unit_token = strtok(units_copy, ",");
+    
+    // Skip first column (time)
+    token = strtok(NULL, ",");
+    unit_token = strtok(NULL, ",");
+    
+    // Create channels
+    while (token && unit_token) {
+        // Remove newline if present
+        char* nl = strchr(token, '\n');
+        if (nl) *nl = '\0';
+        nl = strchr(unit_token, '\n');
+        if (nl) *nl = '\0';
+        
+        // Create channel
+        Channel* channel = channel_create(token, unit_token, FLOAT_TYPE, 0);
+        datalog_add_channel(log, channel);
+        
         token = strtok(NULL, ",");
+        unit_token = strtok(NULL, ",");
     }
     
-    // Split units line
-    int unit_count = 0;
-    token = strtok(units, ",");
-    while (token && unit_count < column_count) {
-        unit_tokens[unit_count] = strdup(token);
-        trim_whitespace(unit_tokens[unit_count]);
-        unit_count++;
-        token = strtok(NULL, ",");
-    }
-
-    // Create channels (skip first column which is time)
-    for (int i = 1; i < column_count && i < unit_count; i++) {
-        if (headers[i] && unit_tokens[i]) {
-            Channel* channel = channel_create(headers[i], unit_tokens[i], 0, 1000);
-            if (channel) {
-                log->channels[log->channel_count++] = channel;
-            }
-        }
-    }
-
-    // Count number of data lines to pre-allocate message arrays
-    long pos = ftell(f);
+    free(header_copy);
+    free(units_copy);
+    
+    // Read data lines
     size_t line_count = 0;
-    while (fgets(line, MAX_LINE_LENGTH, f)) {
-        line_count++;
-    }
-    fseek(f, pos, SEEK_SET);
-
-    // Resize message arrays
-    for (size_t i = 0; i < log->channel_count; i++) {
-        Channel* channel = log->channels[i];
-        channel->message_capacity = line_count;
-        channel->messages = realloc(channel->messages, line_count * sizeof(Message));
-        channel->message_count = 0;
-    }
-
-    // Parse data rows
-    size_t row = 0;
-    while (fgets(line, MAX_LINE_LENGTH, f)) {
-        char* value_str = strtok(line, ",");
-        if (!value_str || !is_numeric(value_str)) continue;
+    while (fgets(line, sizeof(line), f)) {
+        char* line_copy = strdup(line);
+        char* value_token = strtok(line_copy, ",");
         
-        double timestamp = atof(value_str);
+        // First column is timestamp
+        double timestamp = atof(value_token);
         
-        // Process each channel's value
-        for (size_t i = 0; i < log->channel_count; i++) {
-            value_str = strtok(NULL, ",");
-            Channel* channel = log->channels[i];
+        // Process each channel
+        size_t channel_idx = 0;
+        value_token = strtok(NULL, ",");
+        
+        while (value_token && channel_idx < log->channel_count) {
+            Channel* channel = log->channels[channel_idx];
             
-            if (value_str && is_numeric(value_str)) {
-                double value = atof(value_str);
+            // Try to parse value as float
+            if (is_numeric(value_token)) {
+                double value = atof(value_token);
                 
-                // Update decimals count
-                char* decimal_point = strchr(value_str, '.');
+                // Update decimals
+                char* decimal_point = strchr(value_token, '.');
                 if (decimal_point) {
                     int decimals = strlen(decimal_point + 1);
-                    channel->decimals = decimals > channel->decimals ? decimals : channel->decimals;
+                    channel->decimals = MAX(channel->decimals, decimals);
                 }
                 
-                channel->messages[channel->message_count].timestamp = timestamp;
-                channel->messages[channel->message_count].value = value;
-                channel->message_count++;
+                // Add message
+                Message msg = {timestamp, value};
+                channel_add_message(channel, &msg);
             } else {
-                // Invalid value found - remove this channel
-                printf("WARNING: Found non numeric values for channel %s, removing channel\n", 
-                       channel->name);
+                // Remove invalid channel
                 channel_destroy(channel);
-                
-                // Shift remaining channels left
-                for (size_t j = i; j < log->channel_count - 1; j++) {
-                    log->channels[j] = log->channels[j + 1];
-                }
+                memmove(&log->channels[channel_idx], 
+                       &log->channels[channel_idx + 1],
+                       (log->channel_count - channel_idx - 1) * sizeof(Channel*));
                 log->channel_count--;
-                i--; // Adjust index since we removed a channel
+                channel_idx--;
+                printf("WARNING: Found non numeric values for channel %s, removing channel\n",
+                       channel->name);
             }
+            
+            channel_idx++;
+            value_token = strtok(NULL, ",");
         }
-        row++;
+        
+        free(line_copy);
+        line_count++;
     }
-
-    // Calculate frequency for each channel
-    for (size_t i = 0; i < log->channel_count; i++) {
-        Channel* channel = log->channels[i];
-        if (channel->message_count >= 2) {
-            double duration = channel->messages[channel->message_count-1].timestamp - 
-                            channel->messages[0].timestamp;
-            channel->frequency = duration > 0 ? (channel->message_count - 1) / duration : 0;
-        }
-    }
-
-    // Cleanup
-    for (int i = 0; i < column_count; i++) {
-        free(headers[i]);
-        if (i < unit_count) free(unit_tokens[i]);
-    }
-    free(headers);
-    free(unit_tokens);
+    
     free(header);
     free(units);
     
@@ -245,19 +234,17 @@ int datalog_from_accessport_log(DataLog* log, FILE* f) {
     // For now returning error
     return -1;
 }
-// ********
 
-////////////
 
-void datalog_add_channel(DataLog* log, const char* name, const char* units, int decimals) {
-    if (log->channel_count >= log->channel_capacity) {
-        log->channel_capacity *= 2;
-        log->channels = realloc(log->channels, sizeof(Channel*) * log->channel_capacity);
-    }
+// void datalog_add_channel(DataLog* log, const char* name, const char* units, int decimals) {
+//     if (log->channel_count >= log->channel_capacity) {
+//         log->channel_capacity *= 2;
+//         log->channels = realloc(log->channels, sizeof(Channel*) * log->channel_capacity);
+//     }
     
-    Channel* channel = channel_create(name, units, decimals, 1000);
-    log->channels[log->channel_count++] = channel;
-}
+//     Channel* channel = channel_create(name, units, decimals, 1000);
+//     log->channels[log->channel_count++] = channel;
+// }
 
 double datalog_start(DataLog* log) {
     if (log->channel_count == 0) return 0.0;
