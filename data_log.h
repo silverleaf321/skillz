@@ -13,11 +13,6 @@ typedef struct Message {
     double value;
 } Message;
 
-typedef enum {
-    FLOAT_TYPE,
-    // INT_TYPE
-} DLDataType;
-
 // Channel structure
 typedef struct Channel {
     char* name;
@@ -50,7 +45,7 @@ void data_log_print_channels(DataLog* log);
 DataLog* datalog_create(const char* name);
 void datalog_destroy(DataLog* log);
 void datalog_clear(DataLog* log);
-void datalog_add_channel(DataLog* log, Channel* channel);
+void datalog_add_channel(DataLog* log, const char* name, const char* units, int decimals);
 double datalog_start(DataLog* log);
 double datalog_end(DataLog* log);
 double datalog_duration(DataLog* log);
