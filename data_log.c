@@ -67,7 +67,6 @@ void datalog_destroy(DataLog* log) {
     }
 }
 
-
 int datalog_from_csv_log(DataLog* log, FILE* f) {
     if (!f) return -1;
     
@@ -102,9 +101,17 @@ int datalog_from_csv_log(DataLog* log, FILE* f) {
         nl = strchr(unit_token, '\n');
         if (nl) *nl = '\0';
         
-        // Create channel
-        Channel* channel = channel_create(token, unit_token, FLOAT_TYPE, 0);
-        datalog_add_channel(log, channel);
+        // Trim whitespace
+        trim_whitespace(token);
+        trim_whitespace(unit_token);
+        
+        // Only create channel if name is not empty
+        if (strlen(token) > 0) {
+            Channel* channel = channel_create(token, unit_token, FLOAT_TYPE, 0);
+            if (channel) {
+                datalog_add_channel(log, channel);
+            }
+        }
         
         token = strtok(NULL, ",");
         unit_token = strtok(NULL, ",");
@@ -114,7 +121,6 @@ int datalog_from_csv_log(DataLog* log, FILE* f) {
     free(units_copy);
     
     // Read data lines
-    size_t line_count = 0;
     while (fgets(line, sizeof(line), f)) {
         char* line_copy = strdup(line);
         char* value_token = strtok(line_copy, ",");
@@ -143,16 +149,6 @@ int datalog_from_csv_log(DataLog* log, FILE* f) {
                 // Add message
                 Message msg = {timestamp, value};
                 channel_add_message(channel, &msg);
-            } else {
-                // Remove invalid channel
-                channel_destroy(channel);
-                memmove(&log->channels[channel_idx], 
-                       &log->channels[channel_idx + 1],
-                       (log->channel_count - channel_idx - 1) * sizeof(Channel*));
-                log->channel_count--;
-                channel_idx--;
-                printf("WARNING: Found non numeric values for channel %s, removing channel\n",
-                       channel->name);
             }
             
             channel_idx++;
@@ -160,7 +156,6 @@ int datalog_from_csv_log(DataLog* log, FILE* f) {
         }
         
         free(line_copy);
-        line_count++;
     }
     
     free(header);

@@ -16,7 +16,7 @@ typedef struct Message {
 typedef enum {
     FLOAT_TYPE,
     // INT_TYPE
-} DataType;
+} DLDataType;
 
 // Channel structure
 typedef struct Channel {
