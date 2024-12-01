@@ -13,10 +13,10 @@ typedef struct Message {
     double value;
 } Message;
 
-typedef enum {
-    FLOAT_TYPE,
-    INT_TYPE
-} DataType;
+// typedef enum {
+//     FLOAT_TYPE,
+//     // INT_TYPE
+// } DataType;
 
 // Channel structure
 typedef struct Channel {
